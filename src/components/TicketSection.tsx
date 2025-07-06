@@ -594,8 +594,9 @@ useEffect(() => {
         };
 
         // Call backend Yoco proxy
+        const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000';
         const response = await axios.post(
-          'http://localhost:4000/api/yoco-checkout',
+          `${API_BASE_URL}/api/yoco-checkout`,
           paymentPayload
         );
         console.log('Yoco response:', response.data);
