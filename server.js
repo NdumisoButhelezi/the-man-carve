@@ -1,3 +1,56 @@
+
+import express from 'express';
+import cors from 'cors';
+import axios from 'axios';
+import dotenv from 'dotenv';
+import rateLimit from 'express-rate-limit';
+import admin from 'firebase-admin';
+import { createRequire } from 'module';
+
+dotenv.config();
+
+const app = express();
+
+const require = createRequire(import.meta.url);
+let serviceAccount = null;
+let useEnv = false;
+try {
+  serviceAccount = require('./tatatickets-9b513-firebase-adminsdk-fbsvc-c6a69040b9.json');
+} catch (err) {
+  // If file not found, use env vars (production)
+  useEnv = true;
+}
+
+if (!admin.apps.length) {
+  if (useEnv) {
+    // Build service account from environment variables
+    const projectId = process.env.FIREBASE_PROJECT_ID;
+    const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+    let privateKey = process.env.FIREBASE_PRIVATE_KEY;
+    if (!projectId || !clientEmail || !privateKey) {
+      throw new Error('Missing one or more Firebase environment variables: FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY');
+    }
+    if (privateKey && privateKey.includes('\\n')) {
+      privateKey = privateKey.replace(/\\n/g, '\n');
+    }
+    admin.initializeApp({
+      credential: admin.credential.cert({
+        projectId,
+        clientEmail,
+        privateKey,
+      }),
+      projectId,
+    });
+  } else {
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount),
+      projectId: serviceAccount.project_id || 'tatatickets-9b513',
+    });
+  }
+}
+const firestore = admin.firestore();
+
+console.log('Backend Firebase project:', admin.app().options.projectId);
 // --- Ticket fetch and update endpoints ---
 // Fetch a ticket by ID
 app.get('/api/ticket/:id', async (req, res) => {
@@ -19,31 +72,6 @@ app.put('/api/ticket/:id', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-// --- Yoco Webhook for Payment Success ---
-import admin from 'firebase-admin';
-import { createRequire } from 'module';
-const require = createRequire(import.meta.url);
-const serviceAccount = require('./tatatickets-9b513-firebase-adminsdk-fbsvc-c6a69040b9.json');
-if (!admin.apps.length) {
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount),
-    projectId: 'tatatickets-9b513',
-  });
-}
-const firestore = admin.firestore();
-// --- All Express setup and route definitions below this line ---
-
-import express from 'express';
-import cors from 'cors';
-import axios from 'axios';
-import dotenv from 'dotenv';
-import rateLimit from 'express-rate-limit';
-
-dotenv.config();
-
-const app = express();
-
-console.log('Backend Firebase project:', admin.app().options.projectId);
 
 // Yoco webhook endpoint
 app.post('/api/yoco-webhook', async (req, res) => {
