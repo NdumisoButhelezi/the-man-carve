@@ -25,7 +25,16 @@ const StaffDashboard = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [scanResult, setScanResult] = useState<string>('');
   const [cameraError, setCameraError] = useState<string>('');
-  const [facingMode, setFacingMode] = useState<'user' | 'environment'>('environment');
+  const [facingMode, setFacingMode] = useState<'user' | 'environment'>(() => {
+    // On mobile, default to 'environment' (back camera)
+    if (typeof window !== 'undefined') {
+      const ua = navigator.userAgent || navigator.vendor || '';
+      if (/android|iphone|ipad|ipod|mobile/i.test(ua)) {
+        return 'environment';
+      }
+    }
+    return 'user'; // fallback for desktop
+  });
   const [scannerKey, setScannerKey] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -115,6 +124,17 @@ const StaffDashboard = () => {
   };
 
   const switchCamera = () => {
+    // On mobile, always switch to 'environment' (back camera)
+    if (typeof window !== 'undefined') {
+      const ua = navigator.userAgent || navigator.vendor || '';
+      if (/android|iphone|ipad|ipod|mobile/i.test(ua)) {
+        setFacingMode('environment');
+        setCameraError('');
+        setScannerKey(prev => prev + 1);
+        return;
+      }
+    }
+    // On desktop, toggle as usual
     setFacingMode(facingMode === 'user' ? 'environment' : 'user');
     setCameraError('');
     setScannerKey(prev => prev + 1);
