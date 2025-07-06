@@ -595,8 +595,14 @@ useEffect(() => {
 
         // Call backend Yoco proxy
         const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000';
+        // Use correct endpoint for Netlify Functions (no /api prefix in production)
+        let yocoEndpoint = `${API_BASE_URL.replace(/\/$/, '')}/yoco-checkout`;
+        // For local dev, keep /api/yoco-checkout for Express
+        if (API_BASE_URL.includes('localhost')) {
+          yocoEndpoint = `${API_BASE_URL.replace(/\/$/, '')}/api/yoco-checkout`;
+        }
         const response = await axios.post(
-          `${API_BASE_URL}/api/yoco-checkout`,
+          yocoEndpoint,
           paymentPayload
         );
         console.log('Yoco response:', response.data);
