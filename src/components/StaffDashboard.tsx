@@ -270,7 +270,7 @@ const StaffDashboard = () => {
                       }
                     }}
                     onError={setCameraError}
-                    facingMode={facingMode} // Only pass to QrScanner, not DOM elements
+                    facingMode={facingMode}
                     style={{ width: '100%', height: '100%' }}
                   />
                   {/* Scanner overlay */}
