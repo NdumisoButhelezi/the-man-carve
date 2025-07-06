@@ -157,7 +157,7 @@ useEffect(() => {
 
     let isMounted = true;
     let pollCount = 0;
-    const maxPolls = 15; // e.g. poll for up to 15 seconds
+    const maxPolls = 30; // e.g. poll for up to 15 seconds
     const pollInterval = 1000; // ms
 
     const pollForTicket = async (uid: string, ticketType: string) => {
