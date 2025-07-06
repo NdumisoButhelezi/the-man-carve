@@ -25,4 +25,11 @@ export const db = getFirestore(app);
 // Initialize Analytics
 export const analytics = getAnalytics(app);
 
+// Debug: Log the Firebase project ID at runtime to ensure correct project
+if (typeof window !== 'undefined') {
+  // Only log in browser
+  // eslint-disable-next-line no-console
+  console.log('[DEBUG] Firebase projectId:', firebaseConfig.projectId);
+}
+
 export default app;
