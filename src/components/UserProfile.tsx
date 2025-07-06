@@ -3,6 +3,7 @@ import { signOut } from 'firebase/auth';
 import { auth } from '../config/firebase';
 import { useAuth } from '../hooks/useAuth';
 import { User, LogOut, Receipt, Settings } from 'lucide-react';
+import StudentReceipts from './StudentReceipts'; // Import the StudentReceipts component
 
 interface UserProfileProps {
   onClose: () => void;
@@ -12,6 +13,7 @@ interface UserProfileProps {
 const UserProfile: React.FC<UserProfileProps> = ({ onClose, onViewReceipts }) => {
   const { userData } = useAuth();
   const [showDropdown, setShowDropdown] = useState(false);
+  const [showTickets, setShowTickets] = useState(false); // Manage ticket visibility
 
   const handleLogout = async () => {
     try {
@@ -49,19 +51,20 @@ const UserProfile: React.FC<UserProfileProps> = ({ onClose, onViewReceipts }) =>
           </div>
 
           <div className="p-2">
-            {userData.role === 'student' && onViewReceipts && (
+            {userData.role === 'student' && (
               <button
-                onClick={() => {
-                  onViewReceipts();
-                  setShowDropdown(false);
-                }}
+                onClick={() => setShowTickets(!showTickets)}
                 className="w-full flex items-center space-x-2 px-3 py-2 text-gray-300 hover:text-white hover:bg-gray-800 rounded-md transition-colors"
               >
                 <Receipt size={16} />
                 <span>My Tickets</span>
               </button>
             )}
-            
+            {showTickets && userData.role === 'student' && (
+              <div className="mt-2 bg-gray-800 rounded-lg p-2 max-h-60 overflow-y-auto border border-gray-700">
+                <StudentReceipts onClose={() => setShowTickets(false)} />
+              </div>
+            )}
             <button
               onClick={() => setShowDropdown(false)}
               className="w-full flex items-center space-x-2 px-3 py-2 text-gray-300 hover:text-white hover:bg-gray-800 rounded-md transition-colors"
@@ -69,7 +72,6 @@ const UserProfile: React.FC<UserProfileProps> = ({ onClose, onViewReceipts }) =>
               <Settings size={16} />
               <span>Settings</span>
             </button>
-            
             <button
               onClick={handleLogout}
               className="w-full flex items-center space-x-2 px-3 py-2 text-red-400 hover:text-red-300 hover:bg-gray-800 rounded-md transition-colors"

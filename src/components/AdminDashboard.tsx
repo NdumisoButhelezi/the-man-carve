@@ -4,6 +4,7 @@ import { signOut } from 'firebase/auth';
 import { auth, db } from '../config/firebase';
 import { useAuth } from '../hooks/useAuth';
 import { Plus, Edit, Trash2, LogOut, Users, DollarSign, Ticket, TrendingUp, X, Save, Crown, Shield, Zap, Star, Trophy, Target, QrCode, Activity, Filter, Search, ChevronDown } from 'lucide-react';
+import QRCode from 'qrcode';
 
 interface TicketType {
   id: string;
@@ -143,23 +144,40 @@ const AdminDashboard = () => {
     try {
       const promises = [];
       for (let i = 0; i < newTicket.quantity; i++) {
-        promises.push(
-          addDoc(collection(db, 'tickets'), {
-            ticketType: newTicket.ticketType,
-            price: newTicket.price,
-            userName: '',
-            userEmail: '',
-            userId: '',
-            purchaseDate: '',
-            status: 'available',
-            scanned: false,
-            qrCodeGenerated: false,
-            createdAt: new Date().toISOString()
-          })
-        );
+        // Create the ticket first
+        const ticketRef = await addDoc(collection(db, 'tickets'), {
+          ticketType: newTicket.ticketType,
+          price: newTicket.price,
+          userName: '',
+          userEmail: '',
+          userId: '',
+          purchaseDate: '',
+          status: 'available',
+          scanned: false,
+          qrCodeGenerated: false,
+          createdAt: new Date().toISOString()
+        });
+        // Generate QR code using the Firestore document ID
+        const qrData = ticketRef.id;
+        const qrCodeUrl = await QRCode.toDataURL(qrData);
+        // Update the ticket with QR code info
+        await updateDoc(ticketRef, {
+          qrCodeGenerated: true,
+          qrGeneratedAt: new Date().toISOString(),
+          qrData,
+          qrCodeUrl
+        });
+        // Optionally log QR code creation in qrLogs
+        await addDoc(collection(db, 'qrLogs'), {
+          ticketId: ticketRef.id,
+          ticketType: newTicket.ticketType,
+          userName: '',
+          userEmail: '',
+          qrData,
+          generatedAt: new Date().toISOString(),
+          scanned: false
+        });
       }
-      
-      await Promise.all(promises);
       setCreateStep(3);
       await new Promise(resolve => setTimeout(resolve, 1000));
       
@@ -204,6 +222,23 @@ const AdminDashboard = () => {
       await fetchTickets();
     } catch (error) {
       console.error('Error deleting ticket:', error);
+    }
+  };
+
+  // Delete all tickets
+  const handleDeleteAllTickets = async () => {
+    if (!confirm('Are you sure you want to delete ALL tickets? This cannot be undone.')) return;
+    setLoading(true);
+    try {
+      const q = query(collection(db, 'tickets'));
+      const querySnapshot = await getDocs(q);
+      const deletePromises = querySnapshot.docs.map(docSnap => deleteDoc(doc(db, 'tickets', docSnap.id)));
+      await Promise.all(deletePromises);
+      await fetchTickets();
+    } catch (error) {
+      console.error('Error deleting all tickets:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -554,6 +589,17 @@ const AdminDashboard = () => {
               </tbody>
             </table>
           </div>
+        </div>
+
+        {/* Delete All Tickets Button - Desktop */}
+        <div className="hidden sm:block">
+          <button
+            onClick={handleDeleteAllTickets}
+            className="flex items-center justify-center space-x-2 bg-gradient-to-r from-red-500 to-pink-600 text-white px-4 py-2 rounded-lg hover:from-red-600 hover:to-pink-700 transition-all transform hover:scale-105 shadow-lg mt-4"
+          >
+            <Trash2 size={16} />
+            <span>Delete All Tickets</span>
+          </button>
         </div>
       </div>
 

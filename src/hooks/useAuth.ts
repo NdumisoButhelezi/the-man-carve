@@ -8,6 +8,7 @@ interface UserData {
   email: string;
   role: 'admin' | 'staff' | 'student';
   displayName?: string;
+  phone?: string;
 }
 
 export const useAuth = () => {
@@ -28,7 +29,8 @@ export const useAuth = () => {
               uid: user.uid,
               email: user.email || '',
               role: data.role || 'student',
-              displayName: user.displayName || data.displayName || ''
+              displayName: user.displayName || data.displayName || '',
+              phone: data.phone || ''
             });
           }
         } catch (error) {
