@@ -25,16 +25,17 @@ const StaffDashboard = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [scanResult, setScanResult] = useState<string>('');
   const [cameraError, setCameraError] = useState<string>('');
-  const [facingMode, setFacingMode] = useState<'user' | 'environment'>(() => {
-    // Always default to 'environment' (back camera) on mobile
-    if (typeof window !== 'undefined') {
-      const ua = navigator.userAgent || navigator.vendor || '';
-      if (/android|iphone|ipad|ipod|mobile/i.test(ua)) {
-        return 'environment';
-      }
+  const [facingMode, setFacingMode] = useState<'user' | 'environment'>('environment');
+
+  // If the back camera fails, fallback to the front camera (webcam)
+  const handleCameraError = (err: any) => {
+    setCameraError(typeof err === 'string' ? err : (err?.message || 'Camera error'));
+    // If already on back camera, try switching to front camera as fallback
+    if (facingMode === 'environment') {
+      setFacingMode('user');
+      setScannerKey(prev => prev + 1); // force remount
     }
-    return 'environment'; // fallback to back camera for all
-  });
+  };
   const [scannerKey, setScannerKey] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -279,7 +280,7 @@ const StaffDashboard = () => {
                         handleScanTicket(result.text);
                       }
                     }}
-                    onError={setCameraError}
+                    onError={handleCameraError}
                     facingMode={facingMode}
                     style={{ width: '100%', height: '100%' }}
                   />
