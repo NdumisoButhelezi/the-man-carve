@@ -25,7 +25,16 @@ const StaffDashboard = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [scanResult, setScanResult] = useState<string>('');
   const [cameraError, setCameraError] = useState<string>('');
-  const [facingMode, setFacingMode] = useState<'user' | 'environment'>('environment');
+  const [facingMode, setFacingMode] = useState<'user' | 'environment'>(() => {
+    // Detect if on a phone and default to 'user' (selfie/front camera), else use back camera
+    if (typeof window !== 'undefined') {
+      const ua = navigator.userAgent || navigator.vendor || '';
+      if (/android|iphone|ipad|ipod|mobile/i.test(ua)) {
+        return 'user'; // selfie/front camera on mobile
+      }
+    }
+    return 'environment'; // back camera on desktop/tablet
+  });
 
   // If the back camera fails, fallback to the front camera (webcam)
   const handleCameraError = (err: any) => {
