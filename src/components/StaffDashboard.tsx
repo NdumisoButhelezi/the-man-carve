@@ -25,7 +25,7 @@ const StaffDashboard = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [scanResult, setScanResult] = useState<string>('');
   const [cameraError, setCameraError] = useState<string>('');
-  const [facingMode, setFacingMode] = useState<'user' | 'environment'>(() => {
+  const [replfacingMode, setFacingMode] = useState<'user' | 'environment'>(() => {
     // Detect if on a phone and default to 'user' (selfie/front camera), else use back camera
     if (typeof window !== 'undefined') {
       const ua = navigator.userAgent || navigator.vendor || '';
@@ -40,7 +40,7 @@ const StaffDashboard = () => {
   const handleCameraError = (err: any) => {
     setCameraError(typeof err === 'string' ? err : (err?.message || 'Camera error'));
     // If already on back camera, try switching to front camera as fallback
-    if (facingMode === 'environment') {
+    if (replfacingMode === 'environment') {
       setFacingMode('user');
       setScannerKey(prev => prev + 1); // force remount
     }
@@ -290,7 +290,7 @@ const StaffDashboard = () => {
                       }
                     }}
                     onError={handleCameraError}
-                    facingMode={facingMode}
+                    facingMode={replfacingMode}
                     style={{ width: '100%', height: '100%' }}
                   />
                   {/* Scanner overlay */}
@@ -316,7 +316,7 @@ const StaffDashboard = () => {
                     Scanner Active
                   </p>
                   <p className="text-gray-400 text-xs mt-1">
-                    Camera: {facingMode === 'environment' ? 'Back' : 'Front'}
+                    Camera: {replfacingMode === 'environment' ? 'Back' : 'Front'}
                   </p>
                 </div>
               </div>
