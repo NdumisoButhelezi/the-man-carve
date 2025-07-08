@@ -25,7 +25,7 @@ const StaffDashboard = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [scanResult, setScanResult] = useState<string>('');
   const [cameraError, setCameraError] = useState<string>('');
-  const [replfacingMode, setFacingMode] = useState<'user' | 'environment'>(() => {
+  const [facingMode, setFacingMode] = useState<'user' | 'environment'>(() => {
     const ua = navigator.userAgent || navigator.vendor || '';
     if (/android|iphone|ipad|ipod|mobile/i.test(ua)) {
       return 'environment'; // BACK CAMERA by default on mobile
@@ -37,7 +37,7 @@ const StaffDashboard = () => {
   const handleCameraError = (err: any) => {
     setCameraError(typeof err === 'string' ? err : (err?.message || 'Camera error'));
     // If already on back camera, try switching to front camera as fallback
-    if (replfacingMode === 'environment') {
+    if (facingMode === 'environment') {
       setFacingMode('user');
       setScannerKey(prev => prev + 1); // force remount
     }
@@ -289,7 +289,10 @@ const StaffDashboard = () => {
                     onError={handleCameraError}
                     style={{ width: '100%', height: '100%' }}
                   />
-                  {/* Scanner overlay */}
+                    {/* 
+                    Note: Make sure your site is served over HTTPS (Netlify does this by default).
+                    Some browsers/devices may not support switching or may require user interaction to switch cameras.
+                    */}
                   <div className="absolute inset-0 pointer-events-none">
                     <div className="absolute inset-4 border-2 border-cyan-400 rounded-lg">
                       <div className="absolute top-0 left-0 w-4 h-4 border-t-4 border-l-4 border-cyan-400 rounded-tl-lg"></div>
@@ -312,7 +315,7 @@ const StaffDashboard = () => {
                     Scanner Active
                   </p>
                   <p className="text-gray-400 text-xs mt-1">
-                    Camera: {replfacingMode === 'environment' ? 'Back' : 'Front'}
+                    Camera: {facingMode === 'environment' ? 'Back' : 'Front'}
                   </p>
                 </div>
               </div>
