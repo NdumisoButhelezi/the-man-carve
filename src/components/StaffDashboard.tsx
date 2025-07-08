@@ -26,12 +26,9 @@ const StaffDashboard = () => {
   const [scanResult, setScanResult] = useState<string>('');
   const [cameraError, setCameraError] = useState<string>('');
   const [replfacingMode, setFacingMode] = useState<'user' | 'environment'>(() => {
-    // Detect if on a phone and default to 'user' (selfie/front camera), else use back camera
-    if (typeof window !== 'undefined') {
-      const ua = navigator.userAgent || navigator.vendor || '';
-      if (/android|iphone|ipad|ipod|mobile/i.test(ua)) {
-        return 'user'; // selfie/front camera on mobile
-      }
+    const ua = navigator.userAgent || navigator.vendor || '';
+    if (/android|iphone|ipad|ipod|mobile/i.test(ua)) {
+      return 'environment'; // BACK CAMERA by default on mobile
     }
     return 'environment'; // back camera on desktop/tablet
   });
@@ -283,14 +280,13 @@ const StaffDashboard = () => {
                   <QrScanner
                     key={scannerKey}
                     onScan={(result: any) => {
-                      // Only use result.text as the ticket ID
                       if (result && result.text && !isProcessing) {
                         setCameraError('');
+                        console.log('Scanned ticket:', result.text); // Debug log
                         handleScanTicket(result.text);
                       }
                     }}
                     onError={handleCameraError}
-                    facingMode={replfacingMode}
                     style={{ width: '100%', height: '100%' }}
                   />
                   {/* Scanner overlay */}
@@ -535,4 +531,4 @@ const StaffDashboard = () => {
   );
 };
 
-export default StaffDashboard;
+export default StaffDashboard
