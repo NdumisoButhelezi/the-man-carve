@@ -32,6 +32,7 @@ const StaffDashboard = () => {
     }
     return 'environment'; // back camera on desktop/tablet
   });
+  const [scannerKey, setScannerKey] = useState(0);
 
   // If the back camera fails, fallback to the front camera (webcam)
   const handleCameraError = (err: any) => {
@@ -40,9 +41,8 @@ const StaffDashboard = () => {
     if (facingMode === 'environment') {
       setFacingMode('user');
       setScannerKey(prev => prev + 1); // force remount
-    }
+    
   };
-  const [scannerKey, setScannerKey] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
@@ -533,5 +533,6 @@ const StaffDashboard = () => {
     </div>
   );
 };
+}
 
-export default StaffDashboard;
+export default StaffDashboard
