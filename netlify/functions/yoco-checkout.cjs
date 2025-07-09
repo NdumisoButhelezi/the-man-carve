@@ -1,3 +1,7 @@
+// Rename this file to yoco-checkout.cjs to fix the "module is not defined in ES module scope" error.
+// Netlify detects ".js" as ESM if your package.json has "type": "module".
+// Changing the extension to ".cjs" will force CommonJS mode, which is required for Netlify functions using require().
+
 const axios = require('axios');
 
 exports.handler = async function(event, context) {
