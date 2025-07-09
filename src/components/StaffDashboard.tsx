@@ -41,7 +41,7 @@ const StaffDashboard = () => {
     if (facingMode === 'environment') {
       setFacingMode('user');
       setScannerKey(prev => prev + 1); // force remount
-    
+    }
   };
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -533,6 +533,6 @@ const StaffDashboard = () => {
     </div>
   );
 };
-}
 
-export default StaffDashboard
+
+export default StaffDashboard;

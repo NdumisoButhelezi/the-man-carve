@@ -10,7 +10,17 @@ exports.handler = async function(event, context) {
   }
 
   const YOCO_API_URL = 'https://payments.yoco.com/api';
+  // Use only the live secret key from env
   const YOCO_SECRET_KEY = process.env.VITE_YOCO_SECRET_KEY || process.env.YOCO_SECRET_KEY;
+
+  if (!YOCO_SECRET_KEY || YOCO_SECRET_KEY.startsWith('sk_test')) {
+    return {
+      statusCode: 500,
+      body: JSON.stringify({
+        error: 'Yoco secret key is missing or is a test key. Please set your live key in the environment variables.'
+      })
+    };
+  }
 
   try {
     const reqBody = JSON.parse(event.body);
@@ -21,6 +31,9 @@ exports.handler = async function(event, context) {
         payload.metadata[key] = String(payload.metadata[key]);
       }
     }
+    // Debug: log payload and endpoint
+    console.log('Yoco Checkout Payload:', payload);
+    console.log('Yoco Endpoint:', `${YOCO_API_URL}/checkouts`);
     const yocoRes = await axios.post(
       `${YOCO_API_URL}/checkouts`,
       payload,
@@ -32,11 +45,15 @@ exports.handler = async function(event, context) {
         },
       }
     );
+    // Debug: log Yoco response
+    console.log('Yoco API Response:', yocoRes.data);
     return {
       statusCode: yocoRes.status,
       body: JSON.stringify(yocoRes.data)
     };
   } catch (err) {
+    // Debug: log error details
+    console.error('Yoco API Error:', err.response?.data || err.message);
     return {
       statusCode: err.response?.status || 500,
       body: JSON.stringify({

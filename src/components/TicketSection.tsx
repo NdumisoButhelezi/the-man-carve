@@ -148,17 +148,16 @@ const TicketSection = () => {
 useEffect(() => {
   const params = new URLSearchParams(window.location.search);
   if (params.get('payment') === 'success') {
-    // Show a pop-up/modal immediately for instant feedback
-    setShowReceiptModal(true); // Show modal right away
-    setCurrentReceipt(null); // Clear any previous receipt (optional)
-    setShowAssigningTicket(true); // Optionally show a spinner/assigning state in the modal
+    setShowReceiptModal(true);
+    setCurrentReceipt(null);
+    setShowAssigningTicket(true);
     setPaymentStep(3);
     restorePurchaseData();
 
     let isMounted = true;
     let pollCount = 0;
-    const maxPolls = 30; // e.g. poll for up to 15 seconds
-    const pollInterval = 1000; // ms
+    const maxPolls = 30;
+    const pollInterval = 1000;
 
     const pollForTicket = async (uid: string, ticketType: string) => {
       const userTicketsQuery = query(
@@ -176,14 +175,14 @@ useEffect(() => {
             ...(docSnap.data() as any)
           });
           setShowAssignErrorModal(false);
-          setShowAssigningTicket(false); // Hide spinner/assigning state
+          setShowAssigningTicket(false);
+          fetchAvailability(); // <-- update stats after assignment
         }
         return true;
       }
       return false;
     };
 
-    // Start polling
     const startPolling = async () => {
       let found = false;
       let pd = JSON.parse(localStorage.getItem('purchaseData') || '{}');
@@ -191,7 +190,6 @@ useEffect(() => {
       const ticketType = pd.ticketType || st.type;
       let uid = user?.uid;
 
-      // If user is not yet available, poll for user
       let userPolls = 0;
       while (!uid && userPolls < 10) {
         await new Promise(res => setTimeout(res, 300));
@@ -200,7 +198,6 @@ useEffect(() => {
       }
 
       if (!uid) {
-        // Could not get user, fallback
         setCurrentReceipt({
           id: st.id || '',
           ticketType: ticketType || '',
@@ -212,6 +209,7 @@ useEffect(() => {
           scanned: false
         });
         setShowAssigningTicket(false);
+        fetchAvailability(); // <-- update stats after fallback
         return;
       }
 
@@ -221,7 +219,6 @@ useEffect(() => {
         pollCount++;
         await new Promise(res => setTimeout(res, pollInterval));
       }
-      // If not found after polling, show fallback and update Firestore later
       if (!found && isMounted) {
         setLoading(true);
         const fallbackTicket = {
@@ -238,8 +235,8 @@ useEffect(() => {
           setCurrentReceipt(fallbackTicket);
           setShowAssigningTicket(false);
           setLoading(false);
-        }, 1000); // Show spinner for 1s for better UX
-        // Attempt to update Firestore in the background, then update modal with real ticket
+          fetchAvailability(); // <-- update stats after fallback
+        }, 1000);
         (async () => {
           try {
             const availableTicketsQuery = query(
@@ -285,6 +282,7 @@ useEffect(() => {
                   purchaseDate: ticketData.purchaseDate || '',
                   scanned: ticketData.scanned ?? false
                 });
+                fetchAvailability(); // <-- update stats after assignment
               }
             }
           } catch (err) {
@@ -295,7 +293,6 @@ useEffect(() => {
     };
 
     startPolling();
-    // Cleanup
     return () => {
       isMounted = false;
     };
@@ -594,13 +591,9 @@ useEffect(() => {
         };
 
         // Call backend Yoco proxy
-        const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000';
-        // Use correct endpoint for Netlify Functions (no /api prefix in production)
+        const API_BASE_URL = import.meta.env.VITE_API_BASE_URL; // No fallback to localhost
         let yocoEndpoint = `${API_BASE_URL.replace(/\/$/, '')}/yoco-checkout`;
-        // For local dev, keep /api/yoco-checkout for Express
-        if (API_BASE_URL.includes('localhost')) {
-          yocoEndpoint = `${API_BASE_URL.replace(/\/$/, '')}/api/yoco-checkout`;
-        }
+        // Remove test endpoint logic for production
         const response = await axios.post(
           yocoEndpoint,
           paymentPayload
