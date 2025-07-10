@@ -1,4 +1,3 @@
-
 import express from 'express';
 import cors from 'cors';
 import axios from 'axios';
@@ -73,61 +72,6 @@ app.put('/api/ticket/:id', async (req, res) => {
   }
 });
 
-// Yoco webhook endpoint
-app.post('/api/yoco-webhook', async (req, res) => {
-  try {
-    // Yoco sends event type and data
-    const event = req.body;
-    // Only handle payment success events
-    if (event && event.type === 'checkout.succeeded') {
-      const meta = event.data?.metadata || {};
-      const ticketType = meta.ticketType;
-      const userId = meta.userId;
-      const userName = meta.customerName;
-      const userEmail = meta.customerEmail;
-      const userPhone = meta.customerPhone;
-      const price = parseInt(event.data.amount) / 100;
-      const paymentId = event.data.id;
-      if (!ticketType || !userId) {
-        return res.status(400).json({ error: 'Missing ticketType or userId in metadata' });
-      }
-      // Find an available ticket of this type
-      const ticketsRef = firestore.collection('tickets');
-      const availableSnap = await ticketsRef
-        .where('ticketType', '==', ticketType)
-        .where('status', '==', 'available')
-        .where('ticketType', '!=', 'Unknown')
-        .where('price', '>', 0)
-        .limit(1)
-        .get();
-      if (availableSnap.empty) {
-        return res.status(409).json({ error: 'No available tickets to assign' });
-      }
-      const ticketDoc = availableSnap.docs[0];
-      await ticketDoc.ref.update({
-        ticketType,
-        price,
-        userName,
-        userEmail,
-        userId,
-        purchaseDate: new Date().toISOString(),
-        status: 'confirmed',
-        phone: userPhone,
-        scanned: false,
-        qrCodeGenerated: true,
-        qrGeneratedAt: new Date().toISOString(),
-        paymentId,
-        paymentMethod: 'yoco',
-      });
-      return res.json({ success: true, ticketId: ticketDoc.id });
-    }
-    res.status(200).json({ received: true });
-  } catch (err) {
-    console.error('Webhook error:', err);
-    res.status(500).json({ error: err.message });
-  }
-});
-
 // Rate limiting middleware (100 requests per 15 minutes per IP)
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -144,7 +88,7 @@ const allowedOrigins = [
   'http://localhost:5174',
   'http://localhost:5175',
   'http://localhost:5176',
-  'https://project-igovu.vercel.app',
+  
   'https://themancarve.netlify.app' // Added Netlify production site
 ];
 app.use(cors({
@@ -163,7 +107,14 @@ app.use(cors({
 app.use(express.json({ limit: '2mb' }));
 
 const YOCO_API_URL = 'https://payments.yoco.com/api';
-const YOCO_SECRET_KEY = process.env.VITE_YOCO_SECRET_KEY;
+
+// Determine which Yoco key to use based on NODE_ENV or PORT
+let YOCO_SECRET_KEY;
+if (process.env.NODE_ENV === 'production' || process.env.VITE_YOCO_SECRET_KEY_LIVE) {
+  YOCO_SECRET_KEY = process.env.VITE_YOCO_SECRET_KEY_LIVE;
+} else {
+  YOCO_SECRET_KEY = process.env.VITE_YOCO_SECRET_KEY_TEST;
+}
 
 app.post('/api/yoco-checkout', async (req, res) => {
   try {

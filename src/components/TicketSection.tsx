@@ -197,25 +197,36 @@ useEffect(() => {
         userPolls++;
       }
 
-      if (!uid) {
-        setCurrentReceipt({
-          id: st.id || '',
-          ticketType: ticketType || '',
-          price: st.price || 0,
+      // Always simulate ticket assignment after payment (no webhook in prod)
+      const availableTicketsQuery = query(
+        collection(db, 'tickets'),
+        where('ticketType', '==', ticketType),
+        where('status', '==', 'available')
+      );
+      const availableTicketsSnapshot = await getDocs(availableTicketsQuery);
+      if (!availableTicketsSnapshot.empty && uid) {
+        const availableTicket = availableTicketsSnapshot.docs[0];
+        await updateDoc(doc(db, 'tickets', availableTicket.id), {
+          status: 'confirmed',
+          userId: uid,
           userName: pd.fullName || '',
           userEmail: pd.email || '',
           phone: pd.phone || '',
-          purchaseDate: new Date().toISOString(),
-          scanned: false
+          purchaseDate: new Date().toISOString()
         });
-        setShowAssigningTicket(false);
-        fetchAvailability(); // <-- update stats after fallback
-        return;
       }
 
-      while (pollCount < maxPolls && !found) {
-        found = await pollForTicket(uid, ticketType);
-        if (found) break;
+      while (pollCount < maxPolls && !found && isMounted) {
+        if (uid && ticketType) {
+          found = await pollForTicket(uid, ticketType);
+        } else {
+          break;
+        }
+        if (found) {
+          // Ensure ticket stats are updated immediately after finding ticket
+          fetchAvailability();
+          break;
+        }
         pollCount++;
         await new Promise(res => setTimeout(res, pollInterval));
       }
@@ -236,6 +247,9 @@ useEffect(() => {
           setShowAssigningTicket(false);
           setLoading(false);
           fetchAvailability(); // <-- update stats after fallback
+          setTimeout(() => {
+            window.location.href = '/';
+          }, 4000);
         }, 1000);
         (async () => {
           try {
@@ -265,7 +279,6 @@ useEffect(() => {
                 paymentId: '',
                 paymentMethod: 'yoco'
               });
-              // Fetch the updated ticket and update the modal
               const ticketDocSnap = await getDocs(query(collection(db, 'tickets'), where('__name__', '==', ticketId)));
               let ticketData: Partial<TicketReceipt> = {};
               ticketDocSnap.forEach(docSnap => {
@@ -289,6 +302,12 @@ useEffect(() => {
             console.error('Error updating Firestore with fallback ticket:', err);
           }
         })();
+      } else if (found && isMounted) {
+        // Ensure ticket stats are updated after polling success
+        fetchAvailability();
+        setTimeout(() => {
+          window.location.href = '/';
+        }, 4000);
       }
     };
 
@@ -591,14 +610,21 @@ useEffect(() => {
         };
 
         // Call backend Yoco proxy
-        const API_BASE_URL = import.meta.env.VITE_API_BASE_URL; // No fallback to localhost
+        // Use correct endpoint for local dev or production
+        const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
         let yocoEndpoint = `${API_BASE_URL.replace(/\/$/, '')}/yoco-checkout`;
-        // Remove test endpoint logic for production
         const response = await axios.post(
           yocoEndpoint,
           paymentPayload
         );
         console.log('Yoco response:', response.data);
+
+        // --- NEW: Read from Yoco response and update ticket stats immediately if payment is successful ---
+        if (response.data && response.data.status === 'created' && response.data.redirectUrl) {
+          // Optionally, you can optimistically update ticket stats here
+          fetchAvailability(); // Update ticket stats immediately after Yoco checkout is created
+        }
+
         // Yoco returns redirectUrl, not checkout_url
         const redirectUrl = response.data.redirectUrl || response.data.checkout_url;
         if (redirectUrl) {

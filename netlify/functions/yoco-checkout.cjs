@@ -5,10 +5,26 @@
 const axios = require('axios');
 
 exports.handler = async function(event, context) {
+  // Add CORS headers for preflight and all responses
+  const corsHeaders = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'Content-Type,Authorization',
+    'Access-Control-Allow-Methods': 'POST,OPTIONS'
+  };
+
+  if (event.httpMethod === 'OPTIONS') {
+    // Handle CORS preflight
+    return {
+      statusCode: 200,
+      headers: corsHeaders,
+      body: ''
+    };
+  }
+
   if (event.httpMethod !== 'POST') {
     return {
       statusCode: 405,
-      headers: { Allow: 'POST' },
+      headers: corsHeaders,
       body: `Method ${event.httpMethod} Not Allowed`
     };
   }
@@ -17,9 +33,12 @@ exports.handler = async function(event, context) {
   // Use only the live secret key from env
   const YOCO_SECRET_KEY = process.env.VITE_YOCO_SECRET_KEY || process.env.YOCO_SECRET_KEY;
 
-  if (!YOCO_SECRET_KEY || YOCO_SECRET_KEY.startsWith('sk_test')) {
+  // Only block test keys in production, allow in local/dev
+  const isProd = process.env.NODE_ENV === 'production' || process.env.CONTEXT === 'production';
+  if (!YOCO_SECRET_KEY || (isProd && YOCO_SECRET_KEY.startsWith('sk_test'))) {
     return {
-      statusCode: 500,
+      statusCode: 403,
+      headers: corsHeaders,
       body: JSON.stringify({
         error: 'Yoco secret key is missing or is a test key. Please set your live key in the environment variables.'
       })
@@ -53,15 +72,18 @@ exports.handler = async function(event, context) {
     console.log('Yoco API Response:', yocoRes.data);
     return {
       statusCode: yocoRes.status,
+      headers: corsHeaders,
       body: JSON.stringify(yocoRes.data)
     };
   } catch (err) {
     // Debug: log error details
-    console.error('Yoco API Error:', err.response?.data || err.message);
+    console.error('Yoco API Error:', err.response?.data || err.message, err.stack);
     return {
       statusCode: err.response?.status || 500,
+      headers: corsHeaders,
       body: JSON.stringify({
         error: err.response?.data || err.message,
+        stack: err.stack // Add stack trace for debugging
       })
     };
   }
